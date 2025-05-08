@@ -205,6 +205,15 @@ with right_sidebar_col:
 # --- Left Sidebar Options ---
 st.sidebar.divider()
 if st.sidebar.button("Reset"): # User's button text
+
+    if st.session_state.messages:
+        valid_messages = [msg for msg in st.session_state.messages if msg.get("content")]
+        if valid_messages:
+            df = pd.DataFrame(valid_messages)
+            timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+            csv_filename = f"em_case_conversation_{timestamp}.csv"
+            csv_data = df.to_csv(index=False).encode("utf-8")
+
     st.session_state.messages = []
     st.session_state.case_summary = "Summary will appear here once the new case starts." 
     st.session_state.error_fetching_initial_case = False # Reset error flag
