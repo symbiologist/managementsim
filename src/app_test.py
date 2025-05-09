@@ -3,33 +3,68 @@ import litellm
 import os
 import copy # To avoid modifying the original system prompt message
 import pandas as pd
-from case_config import SYSTEM_PROMPT # Import the system prompt
+# Updated import from case_config
+from case_config import SYSTEM_PROMPT, CASE_1, CASE_2, CASE_3 # Assuming CASE_1, CASE_2, CASE_3 are defined
+
+# Imports for Google Drive integration
+import io
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload # More robust for in-memory uploads
 
 # --- Configuration ---
 st.set_page_config(page_title="EM Case Simulator", layout="wide")
 st.title("Emergency Medicine Case Simulator") # User's title
 
-# --- Introductory Text ---
-# User's introductory text
-st.text("Welcome to the case simulator. You may ask questions, order tests, order medications, and request consults.")
-st.text("You can also request a hint if needed. The case will continue until you Discharge or Admit the patient.")
-st.divider()
+# --- Define Available Cases (mapping direct variable names to case detail variables) ---
+AVAILABLE_CASES = {
+    "CASE_1": CASE_1,
+    "CASE_2": CASE_2,
+    "CASE_3": CASE_3,
+    # If you add CASE_4, CASE_5 in case_config.py, add them here too:
+    # "CASE_4": CASE_4,
+}
+DEFAULT_CASE_NAME = list(AVAILABLE_CASES.keys())[0] if AVAILABLE_CASES else None
 
-# --- Prompts ---
-# User's SUMMARY_SYSTEM_PROMPT
+
+# --- Session State Initialization ---
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "username_submitted" not in st.session_state:
+    st.session_state.username_submitted = False
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "case_summary" not in st.session_state:
+    st.session_state.case_summary = "Summary will appear here once the case starts."
+if 'error_fetching_initial_case' not in st.session_state: 
+    st.session_state.error_fetching_initial_case = False
+if 'selected_case_name' not in st.session_state: 
+    st.session_state.selected_case_name = DEFAULT_CASE_NAME
+if 'current_system_prompt_content' not in st.session_state: 
+    if st.session_state.selected_case_name and st.session_state.selected_case_name in AVAILABLE_CASES:
+        st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+    else:
+        st.session_state.current_system_prompt_content = SYSTEM_PROMPT
+
+
+# --- Prompts (SUMMARY_SYSTEM_PROMPT is static) ---
 SUMMARY_SYSTEM_PROMPT = """
 You are an expert medical summarizer. Your task is to review a transcript of an emergency medicine case simulation between an AI attending physician and a user (student/resident).
 Based on the entire conversation provided, create a concise summary that would be useful for quickly understanding the patient's current status.
 
 The summary MUST include the following sections. Bullet list these with a newline between each item:
-1.  **ID:** Age, Sex (if mentioned), Chief Complaint.
-2.  **Vitals:** List the most recent set of vitals (BP, HR, RR, Temp, SpO2).
-3.  **Key Labs:** List significant abnormal or critical lab values reported.
-4.  **Key Imaging:** Briefly mention significant findings from X-rays, CT scans, ultrasounds, etc.
-5.  **Interventions Administered:**
+**ID:** Age, Sex (if mentioned), Chief Complaint.
+**PMH:** Relevant past medical history.
+**Meds:** list any long-term meds the patient is taking.
+**Vitals:** Show an indented list of the most recent set of vitals (BP, HR, RR, Temp, SpO2).
+**Exam:** List pertinent positives and negatives from a physical exam in bullet form.
+**Labs:** List significant abnormal or critical lab values reported.
+**Imaging:** Briefly mention significant findings from X-rays, CT scans, ultrasounds, etc.
+**Other:** Briefly mention significant findings from other tests, such as EKGs
+**Interventions Administered:**
 
 Format clearly using Markdown.
-If information for a section is not yet available in the transcript, state "Not yet available" or "Not mentioned".
+If information for a section is not yet available in the transcript, please the section black. 
 The summary should reflect the *latest* state of the case based on the full transcript.
 Example for Vitals:
 * **BP:** 120/80 mmHg
@@ -39,7 +74,7 @@ Example for Vitals:
 * **SpO2:** 98% on Room Air
 """
 
-# --- API Key Setup ---
+# --- API Key Setup (done once) ---
 openai_key = st.secrets.get("OPENAI_API_KEY")
 anthropic_secrets = st.secrets.get("anthropic", {})
 anthropic_key = anthropic_secrets.get("api_key")
@@ -53,40 +88,27 @@ if anthropic_key:
 if gemini_key:
     os.environ["GEMINI_API_KEY"] = gemini_key
 
-# --- Model Selection (left sidebar) ---
-available_models = []
+# --- Model Selection (left sidebar - always visible) ---
+available_llm_models = [] 
 if gemini_key:
-    available_models.extend(["gemini/gemini-2.0-flash", "gemini/gemini-2.5-pro"])
+    available_llm_models.extend(["gemini/gemini-2.0-flash"]) 
 if openai_key:
-    available_models.extend(["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"])
+    available_llm_models.extend(["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"])
 if anthropic_key:
-    available_models.extend(["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"])
+    available_llm_models.extend(["claude-3-sonnet-20240229", "claude-3-haiku-20240307"])
 
-if not available_models:
-    st.error("No API keys found. Please add API keys to your .streamlit/secrets.toml file.")
-    st.stop()
+if not available_llm_models:
+    st.sidebar.error("No API keys found for LLMs. Please add API keys to your .streamlit/secrets.toml file.")
+else:
+    selected_llm_model_for_sim = st.sidebar.selectbox( 
+        "Select LLM Model",
+        available_llm_models,
+        index=0,
+        key="selected_llm_model_widget" 
+    )
+    summarizer_llm_model_for_sim = selected_llm_model_for_sim 
 
-selected_model = st.sidebar.selectbox(
-    "Select LLM Model for Case Simulation",
-    available_models,
-    index=0,
-    key="selected_model"
-)
-summarizer_model = selected_model # Use the same model for summarization for simplicity
-
-# --- System Prompt for Main Chat ---
-main_chat_system_message = {"role": "system", "content": SYSTEM_PROMPT}
-
-# --- Session State Initialization ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "case_summary" not in st.session_state:
-    st.session_state.case_summary = "Summary will appear here once the case starts."
-if 'error_fetching_initial_case' not in st.session_state: # To track initial load errors for st.info message
-    st.session_state.error_fetching_initial_case = False
-
-
-# --- Helper Function to Format Chat History for Summarizer ---
+# --- Helper Functions (defined globally) ---
 def format_chat_history_for_summary(chat_messages):
     formatted_history = []
     for msg in chat_messages:
@@ -94,178 +116,231 @@ def format_chat_history_for_summary(chat_messages):
         formatted_history.append(f"{role}: {msg['content']}")
     return "\n".join(formatted_history)
 
-# --- Helper Function to Generate Case Summary ---
 def generate_case_summary(chat_history_for_summary, model_to_use):
+    if not model_to_use: 
+        return "Summarizer LLM not selected. Cannot generate summary."
     if not chat_history_for_summary:
         return "No case information available to summarize yet."
-
     summary_messages = [
         {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
         {"role": "user", "content": f"Please summarize the following case interaction transcript:\n\n{chat_history_for_summary}"}
     ]
     try:
         response = litellm.completion(
-            model=model_to_use,
-            messages=summary_messages,
-            temperature=0.3 # Lower temperature for more factual summary
+            model=model_to_use, messages=summary_messages, temperature=0.3
         )
         summary = response.choices[0].message.content
         return summary
     except Exception as e:
         return f"Could not generate summary at this time. Error: {str(e)[:100]}..."
 
-# --- Initial Case Presentation ---
-if not st.session_state.messages and not st.session_state.error_fetching_initial_case : # Only on first run or after reset, and no previous error
-    if st.session_state.selected_model:
-        try:
-            with st.spinner(f"Preparing a new case..."): # User's spinner text
-                initial_messages_for_case_presentation = [
-                    main_chat_system_message,
-                    {"role": "user", "content": "Initialize the case. Please present the initial patient information including chief complaint, brief history, and initial vital signs."}
-                ]
-                initial_response = litellm.completion(
-                    model=st.session_state.selected_model,
-                    messages=initial_messages_for_case_presentation,
-                )
-                assistant_initial_message = initial_response.choices[0].message.content
-                st.session_state.messages.append({"role": "assistant", "content": assistant_initial_message})
-                
-                formatted_history = format_chat_history_for_summary(st.session_state.messages)
-                st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_model)
-                st.session_state.error_fetching_initial_case = False # Reset error flag on success
-
-        except Exception as e:
-            st.error(f"Error fetching initial case: {e}")
-            st.session_state.messages.append({"role": "assistant", "content": "Sorry, I couldn't load a case. Please try resetting or check the API configuration."})
-            st.session_state.case_summary = "Could not load initial case summary due to an error."
-            st.session_state.error_fetching_initial_case = True # Set error flag
-    else:
-        st.warning("No model selected. Please select a model to start.")
-
-# --- Define Page Layout: Main chat area and Right Sidebar ---
-main_col, right_sidebar_col = st.columns([3, 1]) # User's column sizing
-
-with main_col:
-    st.subheader("Simulation Interface") # User's subheader
-
-    # Define CSS for the chat area background
-    st.markdown("""
-    <style>
-    .chat-area-background {
-        background-color: #e9ecef; /* A very light gray for the chat area */
-        padding: 10px;             /* Padding inside the background area */
-        border-radius: 5px;        /* Optional: match container's border radius if desired */
-        /* Height is managed by the parent st.container */
-    }
-    /* Ensure the chat messages themselves don't have conflicting backgrounds if issues arise */
-    .stChatMessage {
-        background-color: transparent !important; /* Or specific colors for user/assistant messages */
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Create a container for the chat messages with a fixed height and a border
-    chat_display_area = st.container(height=600, border=True) # Adjust height as needed
-
-    with chat_display_area:
-        # Start the custom styled div for the background INSIDE the scrollable container
-        st.markdown("<div class='chat-area-background'>", unsafe_allow_html=True)
-
-        # Display all chat messages from session state inside the styled div
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-        # Display "case will be presented shortly" only if messages are empty AND no initial error
-        if not st.session_state.messages and not st.session_state.error_fetching_initial_case:
-            st.info("The case will be presented shortly...")
-        
-        # Close the custom styled div for the background
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Chat input is rendered after all messages and outside the scrollable container.
-    # User's chat input placeholder
-    if prompt := st.chat_input("Your response (e.g., 'When did this start?', 'Vitals', 'Order CBC', 'Administer Tylenol')"):
-        # Add user message to session state
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        messages_for_api = [main_chat_system_message] + copy.deepcopy(st.session_state.messages)
-
-        try:
-            with st.spinner(f"Loading..."): # User's spinner text
-                response = litellm.completion(
-                    model=st.session_state.selected_model,
-                    messages=messages_for_api,
-                )
-                assistant_response = response.choices[0].message.content
-                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-
-                formatted_history = format_chat_history_for_summary(st.session_state.messages)
-                st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_model)
-
-            st.rerun()
-
-        except Exception as e:
-            st.error(f"An error occurred with the main chat: {e}")
-            st.rerun()
-
-
-with right_sidebar_col:
-    # Define CSS for the gray background, border, and padding for the right panel
-    st.markdown("""
-    <style>
-    .styled-right-panel {
-        background-color: #f0f2f6; /* A light gray color */
-        border: 1px solid #cccccc;   /* A light gray border */
-        padding: 10px;               /* Reduced padding */
-        border-radius: 5px;          /* Optional: rounded corners */
-        box-sizing: border-box;      /* Important for layout consistency */
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Start the custom styled div that will wrap the right panel's content
-    st.markdown("<div class='styled-right-panel'>", unsafe_allow_html=True)
-
-    st.subheader("Live Case Summary") # User's subheader
-    # st.divider() # User had this commented out, keeping it that way
-
-    if st.session_state.get("case_summary"):
-        st.markdown(st.session_state.case_summary)
-    else:
-        st.info("Case summary will be generated as the simulation progresses.")
-    
-    # Close the custom styled div
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# --- Left Sidebar Options ---
-st.sidebar.divider()
-if st.sidebar.button("Reset"): # User's button text
-    st.session_state.messages = []
-    st.session_state.case_summary = "Summary will appear here once the new case starts." 
-    st.session_state.error_fetching_initial_case = False # Reset error flag
-    st.rerun() 
-
-st.sidebar.info("Select a model and start interacting with the case presented by the AI.")
-
-if st.sidebar.button("Save Conversation"):
-    if st.session_state.messages:
-        valid_messages = [msg for msg in st.session_state.messages if msg.get("content")]
-        if valid_messages:
-            df = pd.DataFrame(valid_messages)
-            timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
-            csv_filename = f"em_case_conversation_{timestamp}.csv"
-            csv_data = df.to_csv(index=False).encode("utf-8")
-            st.sidebar.download_button(
-                label="Download Conversation as CSV",
-                data=csv_data,
-                file_name=csv_filename,
-                mime="text/csv",
-                key=f"download_{timestamp}" 
+def upload_to_google_drive(messages_to_save, username_prefix, case_name_for_file):
+    if not messages_to_save:
+        st.sidebar.warning("No conversation content to save to Google Drive.")
+        return False
+    creds_dict = st.secrets.get("gcp_service_account_key_json")
+    if not creds_dict:
+        st.sidebar.error("Google Cloud service account key not found in secrets for Drive upload.")
+        return False
+    try:
+        with st.spinner("Saving to Google Drive..."):
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=['https://www.googleapis.com/auth/drive.file']
             )
-        else:
-            st.sidebar.warning("No valid conversation content to save.")
+            drive_service = build('drive', 'v3', credentials=creds)
+            df = pd.DataFrame(messages_to_save)
+            csv_buffer = io.BytesIO()
+            df.to_csv(csv_buffer, index=False, encoding='utf-8')
+            csv_buffer.seek(0)
+            timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Use the direct case name (e.g., "CASE_1") for the filename
+            safe_case_name = case_name_for_file if case_name_for_file else "UnknownCase"
+            file_name = f"{username_prefix}_{safe_case_name}_em_case_conversation_{timestamp}.csv"
+            
+            folder_id = "1mLOznW0Jtcdb_2AJKKu3y94L913Y26ji" 
+            if folder_id == "YOUR_GOOGLE_DRIVE_FOLDER_ID": 
+                 st.sidebar.warning("Google Drive Folder ID is not configured. Please update the script.")
+                 return False 
+            file_metadata = {'name': file_name, 'parents': [folder_id]}
+            media_body = MediaIoBaseUpload(csv_buffer, mimetype='text/csv', resumable=True)
+            drive_service.files().create(
+                body=file_metadata, media_body=media_body, fields='id'
+            ).execute()
+            st.sidebar.success(f"Conversation saved to Google Drive: {file_name}")
+            return True
+    except Exception as e:
+        st.sidebar.error(f"Failed to save to Google Drive: {e}")
+        return False
+
+# --- Main Application Logic ---
+if not st.session_state.username_submitted:
+    st.header("User Login") 
+    st.markdown("Please enter your username to begin the simulation.")
+    
+    with st.form("username_form_main_page"):
+        username_input_main = st.text_input("Username", key="username_input_main_page_widget", help="This will be used to prefix saved filenames.")
+        submitted_main = st.form_submit_button("Start Simulation")
+        
+        if submitted_main:
+            if not available_llm_models: 
+                st.error("No LLM models available. Please check API key configuration in the sidebar and secrets file.")
+            elif not AVAILABLE_CASES:
+                 st.error("No cases are defined. Please check case_config.py and the AVAILABLE_CASES dictionary in the script.")
+            elif username_input_main.strip():
+                st.session_state.username = username_input_main.strip()
+                st.session_state.username_submitted = True
+                
+                if st.session_state.selected_case_name not in AVAILABLE_CASES: # Ensure default is valid
+                    st.session_state.selected_case_name = DEFAULT_CASE_NAME
+                
+                if st.session_state.selected_case_name: 
+                    st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+                else: 
+                    st.session_state.current_system_prompt_content = SYSTEM_PROMPT
+                    st.warning("No default case could be selected. Using base system prompt.")
+
+                st.session_state.messages = [] 
+                st.session_state.case_summary = "Summary will appear here once the case starts." 
+                st.session_state.error_fetching_initial_case = False 
+                st.rerun() 
+            else:
+                st.error("Username cannot be empty. Please enter a username.")
+    
+    st.sidebar.info("Please enter a username to start.")
+
+else: # Username has been submitted
+    case_options = list(AVAILABLE_CASES.keys())
+    if not case_options:
+        st.sidebar.error("No cases found. Please define cases in case_config.py and AVAILABLE_CASES dictionary.")
     else:
-        st.sidebar.warning("No conversation to save yet!")
+        if st.session_state.selected_case_name not in case_options:
+            st.session_state.selected_case_name = case_options[0] 
+            st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+            st.session_state.messages = []
+            st.session_state.case_summary = "Summary will appear here once the new case starts."
+            st.session_state.error_fetching_initial_case = False
+
+        newly_selected_case_name = st.sidebar.selectbox(
+            "Select Case",
+            options=case_options, # Uses keys like "CASE_1", "CASE_2"
+            key="case_selector_widget",
+            index=case_options.index(st.session_state.selected_case_name) if st.session_state.selected_case_name in case_options else 0
+        )
+
+        if newly_selected_case_name != st.session_state.selected_case_name:
+            st.session_state.selected_case_name = newly_selected_case_name
+            st.session_state.messages = [] 
+            st.session_state.case_summary = "Summary will appear here once the new case starts."
+            st.session_state.error_fetching_initial_case = False
+            st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+            st.rerun() 
+
+    current_main_chat_system_message = {"role": "system", "content": st.session_state.current_system_prompt_content}
+
+    st.text(f"Welcome, {st.session_state.username}! You are working on: {st.session_state.selected_case_name or 'No Case Selected'}")
+    st.text("You may ask questions, order tests, order medications, and request consults.")
+    st.text("You can also request a hint if needed. The case will continue until you Discharge or Admit the patient.")
+    st.divider() 
+
+    main_col, right_sidebar_col = st.columns([3, 1])
+
+    with main_col:
+        st.subheader("Simulation Interface") 
+
+        if not st.session_state.messages and not st.session_state.error_fetching_initial_case and st.session_state.selected_case_name:
+            if 'selected_llm_model_widget' in st.session_state and st.session_state.selected_llm_model_widget:
+                try:
+                    with st.spinner(f"Preparing {st.session_state.selected_case_name} for {st.session_state.username}..."):
+                        initial_messages_for_case_presentation = [
+                            current_main_chat_system_message, 
+                            {"role": "user", "content": "Present the case based on the details provided in your system instructions."}
+                        ]
+                        initial_response = litellm.completion(
+                            model=st.session_state.selected_llm_model_widget,
+                            messages=initial_messages_for_case_presentation,
+                        )
+                        assistant_initial_message = initial_response.choices[0].message.content
+                        st.session_state.messages.append({"role": "assistant", "content": assistant_initial_message})
+                        if st.session_state.messages:
+                             formatted_history = format_chat_history_for_summary(st.session_state.messages)
+                             st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_llm_model_for_sim)
+                        st.session_state.error_fetching_initial_case = False
+                except Exception as e:
+                    st.error(f"Error fetching initial case: {e}")
+                    st.session_state.messages.append({"role": "assistant", "content": "Sorry, I couldn't load a case. Please try resetting or check the API configuration."})
+                    st.session_state.case_summary = "Could not load initial case summary due to an error."
+                    st.session_state.error_fetching_initial_case = True
+            elif not st.session_state.selected_case_name:
+                 st.warning("Please select a case from the sidebar to begin.")
+            else: 
+                st.warning("No LLM model selected. Please select a model to start.")
+
+        chat_display_area = st.container(height=500, border=True) 
+        with chat_display_area:
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+            if not st.session_state.messages and not st.session_state.error_fetching_initial_case and st.session_state.selected_case_name:
+                st.info("The case will be presented shortly...")
+        
+        if prompt := st.chat_input("Your response (e.g., 'When did this start?', 'Vitals', 'Order CBC', 'Administer Tylenol')"):
+            if not st.session_state.selected_case_name:
+                st.error("Please select a case from the sidebar before interacting.")
+            elif not st.session_state.get('selected_llm_model_widget'):
+                st.error("Please select an LLM model from the sidebar.")
+            else:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                messages_for_api = [current_main_chat_system_message] + copy.deepcopy(st.session_state.messages)
+                try:
+                    with st.spinner(f"Loading..."):
+                        response = litellm.completion(
+                            model=st.session_state.selected_llm_model_widget,
+                            messages=messages_for_api,
+                        )
+                        assistant_response = response.choices[0].message.content
+                        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                        if st.session_state.messages: 
+                            formatted_history = format_chat_history_for_summary(st.session_state.messages)
+                            st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_llm_model_for_sim)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"An error occurred with the main chat: {e}")
+                    st.rerun()
+
+    with right_sidebar_col:
+        st.subheader("Live Case Summary")
+        summary_display_area = st.container(height=500, border=True) 
+        with summary_display_area:
+            if st.session_state.get("case_summary"):
+                st.markdown(st.session_state.case_summary)
+            else:
+                st.info("Case summary will be generated as the simulation progresses.")
+
+    st.sidebar.divider() 
+    if st.sidebar.button("Save and Reset"): 
+        if st.session_state.messages:
+            valid_messages_to_save = [msg for msg in st.session_state.messages if msg.get("content")]
+            if valid_messages_to_save:
+                # Pass the direct case name (e.g., "CASE_1") for the filename
+                upload_to_google_drive(valid_messages_to_save, st.session_state.username, st.session_state.selected_case_name) 
+            else:
+                st.sidebar.info("No messages in the current session to save.")
+        else:
+            st.sidebar.info("No messages in the current session to save.")
+        
+        st.session_state.messages = []
+        st.session_state.case_summary = "Summary will appear here once the new case starts." 
+        st.session_state.error_fetching_initial_case = False
+        st.session_state.username = "" 
+        st.session_state.username_submitted = False 
+        
+        st.session_state.selected_case_name = DEFAULT_CASE_NAME 
+        if st.session_state.selected_case_name:
+            st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+        else:
+            st.session_state.current_system_prompt_content = SYSTEM_PROMPT
+        st.rerun() 
+
+    st.sidebar.info(f"User: {st.session_state.username} | LLM: {st.session_state.get('selected_llm_model_widget', 'N/A')} | Case: {st.session_state.get('selected_case_name', 'None Selected')}")
 
