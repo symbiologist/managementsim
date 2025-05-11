@@ -16,13 +16,13 @@ from googleapiclient.http import MediaIoBaseUpload # More robust for in-memory u
 st.set_page_config(page_title="EM Case Simulator", layout="wide")
 st.title("Emergency Medicine Case Simulator") # User's title
 
-# --- Define Available Cases (mapping direct variable names to case detail variables) ---
+# --- Define Available Cases (mapping user-friendly names to case detail variables) ---
 AVAILABLE_CASES = {
-    "CASE_1": CASE_1,
-    "CASE_2": CASE_2,
-    "CASE_3": CASE_3,
+    "Case 1": CASE_1,
+    "Case 2": CASE_2,
+    "Case 3": CASE_3,
     # If you add CASE_4, CASE_5 in case_config.py, add them here too:
-    # "CASE_4": CASE_4,
+    # "Case 4": CASE_4, # Example
 }
 DEFAULT_CASE_NAME = list(AVAILABLE_CASES.keys())[0] if AVAILABLE_CASES else None
 
@@ -45,6 +45,8 @@ if 'current_system_prompt_content' not in st.session_state:
         st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
     else:
         st.session_state.current_system_prompt_content = SYSTEM_PROMPT
+if 'chat_input_disabled' not in st.session_state: # This will now control if the chat input is *rendered*
+    st.session_state.chat_input_disabled = False
 
 
 # --- Prompts (SUMMARY_SYSTEM_PROMPT is static) ---
@@ -143,7 +145,7 @@ def upload_to_google_drive(messages_to_save, username_prefix, case_name_for_file
         st.sidebar.error("Google Cloud service account key not found in secrets for Drive upload.")
         return False
     try:
-        with st.spinner("Saving to Google Drive..."):
+        with st.spinner(f"Saving conversation for {case_name_for_file} to Google Drive..."): 
             creds = service_account.Credentials.from_service_account_info(
                 creds_dict, scopes=['https://www.googleapis.com/auth/drive.file']
             )
@@ -154,8 +156,7 @@ def upload_to_google_drive(messages_to_save, username_prefix, case_name_for_file
             csv_buffer.seek(0)
             timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
             
-            # Use the direct case name (e.g., "CASE_1") for the filename
-            safe_case_name = case_name_for_file if case_name_for_file else "UnknownCase"
+            safe_case_name = case_name_for_file.replace(':', '').replace(' ', '_').replace('/', '_') if case_name_for_file else "UnknownCase"
             file_name = f"{username_prefix}_{safe_case_name}_em_case_conversation_{timestamp}.csv"
             
             folder_id = "1mLOznW0Jtcdb_2AJKKu3y94L913Y26ji" 
@@ -167,7 +168,7 @@ def upload_to_google_drive(messages_to_save, username_prefix, case_name_for_file
             drive_service.files().create(
                 body=file_metadata, media_body=media_body, fields='id'
             ).execute()
-            st.sidebar.success(f"Conversation saved to Google Drive: {file_name}")
+            st.sidebar.success(f"Conversation for {case_name_for_file} saved to Google Drive: {file_name}")
             return True
     except Exception as e:
         st.sidebar.error(f"Failed to save to Google Drive: {e}")
@@ -175,42 +176,47 @@ def upload_to_google_drive(messages_to_save, username_prefix, case_name_for_file
 
 # --- Main Application Logic ---
 if not st.session_state.username_submitted:
-    st.header("User Login") 
-    st.markdown("Please enter your username to begin the simulation.")
-    
-    with st.form("username_form_main_page"):
-        username_input_main = st.text_input("Username", key="username_input_main_page_widget", help="This will be used to prefix saved filenames.")
-        submitted_main = st.form_submit_button("Start Simulation")
-        
-        if submitted_main:
-            if not available_llm_models: 
-                st.error("No LLM models available. Please check API key configuration in the sidebar and secrets file.")
-            elif not AVAILABLE_CASES:
-                 st.error("No cases are defined. Please check case_config.py and the AVAILABLE_CASES dictionary in the script.")
-            elif username_input_main.strip():
-                st.session_state.username = username_input_main.strip()
-                st.session_state.username_submitted = True
-                
-                if st.session_state.selected_case_name not in AVAILABLE_CASES: # Ensure default is valid
-                    st.session_state.selected_case_name = DEFAULT_CASE_NAME
-                
-                if st.session_state.selected_case_name: 
-                    st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
-                else: 
-                    st.session_state.current_system_prompt_content = SYSTEM_PROMPT
-                    st.warning("No default case could be selected. Using base system prompt.")
+    # --- Username Input Display (left-aligned and narrower using columns) ---
+    login_input_col, empty_spacer_col = st.columns([1.5, 2.5]) 
 
-                st.session_state.messages = [] 
-                st.session_state.case_summary = "Summary will appear here once the case starts." 
-                st.session_state.error_fetching_initial_case = False 
-                st.rerun() 
-            else:
-                st.error("Username cannot be empty. Please enter a username.")
+    with login_input_col: 
+        st.header("User Login") 
+        st.markdown("Please enter your username to begin the simulation.")
+        
+        with st.form("username_form_main_page"):
+            username_input_main = st.text_input("Username", key="username_input_main_page_widget", help="This will be used to prefix saved filenames.")
+            submitted_main = st.form_submit_button("Start Simulation")
+            
+            if submitted_main:
+                if not available_llm_models: 
+                    st.error("No LLM models available. Please check API key configuration in the sidebar and secrets file.")
+                elif not AVAILABLE_CASES:
+                     st.error("No cases are defined. Please check case_config.py and the AVAILABLE_CASES dictionary in the script.")
+                elif username_input_main.strip():
+                    st.session_state.username = username_input_main.strip()
+                    st.session_state.username_submitted = True
+                    
+                    if st.session_state.selected_case_name not in AVAILABLE_CASES: 
+                        st.session_state.selected_case_name = DEFAULT_CASE_NAME
+                    
+                    if st.session_state.selected_case_name: 
+                        st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+                    else: 
+                        st.session_state.current_system_prompt_content = SYSTEM_PROMPT
+                        st.warning("No default case could be selected. Using base system prompt.")
+
+                    st.session_state.messages = [] 
+                    st.session_state.case_summary = "Summary will appear here once the case starts." 
+                    st.session_state.error_fetching_initial_case = False 
+                    st.session_state.chat_input_disabled = False 
+                    st.rerun() 
+                else:
+                    st.error("Username cannot be empty. Please enter a username.")
     
     st.sidebar.info("Please enter a username to start.")
 
 else: # Username has been submitted
-    case_options = list(AVAILABLE_CASES.keys())
+    case_options = list(AVAILABLE_CASES.keys()) 
     if not case_options:
         st.sidebar.error("No cases found. Please define cases in case_config.py and AVAILABLE_CASES dictionary.")
     else:
@@ -220,20 +226,33 @@ else: # Username has been submitted
             st.session_state.messages = []
             st.session_state.case_summary = "Summary will appear here once the new case starts."
             st.session_state.error_fetching_initial_case = False
+            st.session_state.chat_input_disabled = False 
+
+        previous_case_name = st.session_state.selected_case_name
+        # Store whether the input was disabled for the *previous* case before changing it.
+        previous_case_chat_input_disabled = st.session_state.chat_input_disabled
+
 
         newly_selected_case_name = st.sidebar.selectbox(
             "Select Case",
-            options=case_options, # Uses keys like "CASE_1", "CASE_2"
+            options=case_options, 
             key="case_selector_widget",
             index=case_options.index(st.session_state.selected_case_name) if st.session_state.selected_case_name in case_options else 0
         )
 
-        if newly_selected_case_name != st.session_state.selected_case_name:
+        if newly_selected_case_name != previous_case_name:
+            # Auto-save the previous case's chat log ONLY IF chat input was NOT already disabled (i.e., "Done" wasn't typed)
+            if st.session_state.messages and not previous_case_chat_input_disabled:
+                valid_messages_to_save = [msg for msg in st.session_state.messages if msg.get("content")]
+                if valid_messages_to_save:
+                    upload_to_google_drive(valid_messages_to_save, st.session_state.username, previous_case_name)
+            
             st.session_state.selected_case_name = newly_selected_case_name
             st.session_state.messages = [] 
             st.session_state.case_summary = "Summary will appear here once the new case starts."
             st.session_state.error_fetching_initial_case = False
             st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
+            st.session_state.chat_input_disabled = False # Re-enable chat for new case
             st.rerun() 
 
     current_main_chat_system_message = {"role": "system", "content": st.session_state.current_system_prompt_content}
@@ -284,29 +303,52 @@ else: # Username has been submitted
             if not st.session_state.messages and not st.session_state.error_fetching_initial_case and st.session_state.selected_case_name:
                 st.info("The case will be presented shortly...")
         
-        if prompt := st.chat_input("Your response (e.g., 'When did this start?', 'Vitals', 'Order CBC', 'Administer Tylenol')"):
-            if not st.session_state.selected_case_name:
-                st.error("Please select a case from the sidebar before interacting.")
-            elif not st.session_state.get('selected_llm_model_widget'):
-                st.error("Please select an LLM model from the sidebar.")
-            else:
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                messages_for_api = [current_main_chat_system_message] + copy.deepcopy(st.session_state.messages)
-                try:
-                    with st.spinner(f"Loading..."):
-                        response = litellm.completion(
-                            model=st.session_state.selected_llm_model_widget,
-                            messages=messages_for_api,
-                        )
-                        assistant_response = response.choices[0].message.content
-                        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+        # Conditionally render the chat input
+        if not st.session_state.chat_input_disabled:
+            prompt_placeholder = "Type 'Done' to end interaction with this case."
+            if prompt := st.chat_input(prompt_placeholder, key="chat_input_widget"): 
+                if not st.session_state.selected_case_name:
+                    st.error("Please select a case from the sidebar before interacting.")
+                elif not st.session_state.get('selected_llm_model_widget'):
+                    st.error("Please select an LLM model from the sidebar.")
+                else:
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    
+                    if prompt.strip().lower() == "done":
                         if st.session_state.messages: 
-                            formatted_history = format_chat_history_for_summary(st.session_state.messages)
-                            st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_llm_model_for_sim)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"An error occurred with the main chat: {e}")
-                    st.rerun()
+                            messages_to_save_before_done = [
+                                msg for msg in st.session_state.messages if msg.get("content")
+                            ]
+                            if messages_to_save_before_done:
+                                upload_to_google_drive(
+                                    messages_to_save_before_done, 
+                                    st.session_state.username, 
+                                    st.session_state.selected_case_name
+                                )
+                        
+                        st.session_state.chat_input_disabled = True 
+                        st.session_state.messages.append({"role": "assistant", "content": "Okay, this case interaction is now concluded and saved. You can select a new case or reset."})
+                        st.rerun() 
+                    else:
+                        messages_for_api = [current_main_chat_system_message] + copy.deepcopy(st.session_state.messages)
+                        try:
+                            with st.spinner(f"Loading..."):
+                                response = litellm.completion(
+                                    model=st.session_state.selected_llm_model_widget,
+                                    messages=messages_for_api,
+                                )
+                                assistant_response = response.choices[0].message.content
+                                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                                if st.session_state.messages: 
+                                    formatted_history = format_chat_history_for_summary(st.session_state.messages)
+                                    st.session_state.case_summary = generate_case_summary(formatted_history, summarizer_llm_model_for_sim)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"An error occurred with the main chat: {e}")
+                            st.rerun()
+        else: 
+            st.info("Chat input removed. This case interaction is concluded. Reset or select a new case to continue.")
+
 
     with right_sidebar_col:
         st.subheader("Live Case Summary")
@@ -319,13 +361,15 @@ else: # Username has been submitted
 
     st.sidebar.divider() 
     if st.sidebar.button("Save and Reset"): 
-        if st.session_state.messages:
-            valid_messages_to_save = [msg for msg in st.session_state.messages if msg.get("content")]
-            if valid_messages_to_save:
-                # Pass the direct case name (e.g., "CASE_1") for the filename
-                upload_to_google_drive(valid_messages_to_save, st.session_state.username, st.session_state.selected_case_name) 
-            else:
-                st.sidebar.info("No messages in the current session to save.")
+        if st.session_state.messages: 
+            if not st.session_state.chat_input_disabled: 
+                valid_messages_to_save = [msg for msg in st.session_state.messages if msg.get("content")]
+                if valid_messages_to_save:
+                    upload_to_google_drive(valid_messages_to_save, st.session_state.username, st.session_state.selected_case_name) 
+                else:
+                    st.sidebar.info("No messages in the current session to save.")
+            elif st.session_state.chat_input_disabled: 
+                st.sidebar.info("Previous interaction already saved upon typing 'Done'.")
         else:
             st.sidebar.info("No messages in the current session to save.")
         
@@ -334,11 +378,12 @@ else: # Username has been submitted
         st.session_state.error_fetching_initial_case = False
         st.session_state.username = "" 
         st.session_state.username_submitted = False 
+        st.session_state.chat_input_disabled = False 
         
         st.session_state.selected_case_name = DEFAULT_CASE_NAME 
-        if st.session_state.selected_case_name:
+        if st.session_state.selected_case_name: 
             st.session_state.current_system_prompt_content = SYSTEM_PROMPT + "\n\n" + AVAILABLE_CASES[st.session_state.selected_case_name]
-        else:
+        else: 
             st.session_state.current_system_prompt_content = SYSTEM_PROMPT
         st.rerun() 
 
