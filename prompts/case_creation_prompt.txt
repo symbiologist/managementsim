@@ -1,0 +1,90 @@
+You are helping with a design of experiments study design investigating factors associated with the decision to initiate workup for pulmonary embolism in the ED. I will provide the template of a case below. Please give this case some color so it can be run as a medical simulation.
+
+Here are the details of the case that are required for the design of experiments:
+Age: 65-70
+CC: shortness of breath with pleurisy
+Triage vitals: HR 110-120, SpO2 88-90
+ECG: sinus at a rate of (HR above)
+CXR findings: nl
+Meds: no anticoagulants, no antiplatelet agents, if young/female no OCPs
+Exam findings: pt has clear lung sounds and evidence of lower extremity DVT
+
+Now, please generate a case using these details. The case should not include elements that increase or decrease the risk of pulmonary embolism or venous thromboembolism outside of those described above. Similarly, the case should not strongly suggest an alternative diagnosis, but leave the scenario vague. Please complete the following blank case template. It is expected that most results will be within normal limits.
+
+Patient name:
+Age:
+Gender:
+Weight:
+Presenting complaint:
+Triage Note:
+Allergies:
+PMHx:
+Current medications:
+
+Further history: [Include any relevant history not included in triage note above. What information will only be given to participants if they ask?]
+
+Physical Exam: (list any pertinent positive and negative findings)
+Cardio
+Resp
+Abdo
+Neuro
+HEENT
+MSK/skin
+Other
+
+Laboratory Results:
+CBC
+ WBC
+ Hgb
+ Plt
+ 
+Lytes
+ Na
+ K
+ Cl
+ HCO3
+ AG
+ Urea
+ Cr
+ Glucose
+ 
+Extended Lytes
+ Ca
+ Mg
+ PO4
+ Albumin
+ TSH
+ 
+VBG
+ pH
+ pCO2
+ pO2
+ HCO3
+ Lactate
+
+Cardiac/Coags
+ Trop
+ D-dimer
+ INR
+ aPTT
+ 
+Biliary
+ AST
+ ALT
+ GGT
+ ALP
+ Bili
+ Lipase
+ 
+Tox
+ EtOH
+ ASA
+ Tylenol
+ Dig level
+ Osmols
+ 
+Other
+ B-HCG
+
+ECGs, X-rays, Ultrasounds and Pictures:
+POCUS: grossly normal EF, no effusion
