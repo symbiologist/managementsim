@@ -16,7 +16,7 @@ SYSTEM_PROMPT = (
     
     Once the student types "done" or if the patient is admitted, or if the patient is discharged, assume the management simulation has completed.   
     
-    Please adhere to all case details that are provided, including the patient's name.
+    Please adhere to all case details that are provided.
     '''
 )
 
