@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Case Interface - Emergency Medicine Case Simulator{% endblock %}
+
+{% block header %}
+<div class="flex items-center space-x-4">
+    <span class="text-sm text-muted-foreground">User:</span>
+    <span class="text-sm font-medium">{{ user_id }}</span>
+    <div class="h-4 w-px bg-border"></div>
+    <span class="text-sm text-muted-foreground">Case:</span>
+    <span class="text-sm font-medium" id="currentCaseTitle">Loading...</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container max-w-screen-2xl p-4">
+    <!-- Case Selection Card -->
+    <div id="caseSelectionCard" class="mb-6 rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="flex flex-col space-y-1.5 p-6">
+            <h3 class="text-2xl font-semibold leading-none tracking-tight">Select a Case</h3>
+            <p class="text-sm text-muted-foreground">Choose a case to begin your simulation</p>
+        </div>
+        <div class="p-6 pt-0">
+            <div id="casesList" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Cases will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Case Interface -->
+    <div id="caseInterface" class="hidden">
+        <!-- Case Controls -->
+        <div class="mb-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <h2 class="text-xl font-semibold" id="caseTitle">Case Title</h2>
+                <div class="flex space-x-2">
+                    <button 
+                        id="admitButton"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-9 px-4 py-2"
+                    >
+                        Admit Patient
+                    </button>
+                    <button 
+                        id="dischargeButton"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 py-2"
+                    >
+                        Discharge Patient
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: Chat (75%) + Summary (25%) -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Chat Interface (75% - 3 columns) -->
+            <div class="lg:col-span-3 flex flex-col h-[700px]">
+                <div class="rounded-lg border bg-card text-card-foreground shadow-sm flex-1 flex flex-col">
+                    <div class="flex flex-col space-y-1.5 p-4 border-b">
+                        <h3 class="text-lg font-semibold leading-none tracking-tight">Simulation Interface</h3>
+                        <p class="text-sm text-muted-foreground">Ask questions, order tests, request medications, and consults</p>
+                    </div>
+                    
+                    <!-- Chat Messages - Fixed Height with Scroll -->
+                    <div class="flex-1 p-4 overflow-y-auto min-h-0" id="chatMessages" style="max-height: 500px;">
+                        <div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground">
+                            <div class="flex items-center space-x-2">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Loading case...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="border-t p-4">
+                        <form id="chatForm" class="flex space-x-2">
+                            <input 
+                                type="text" 
+                                id="messageInput"
+                                placeholder="Type your message or question..."
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
+                                disabled
+                            />
+                            <button 
+                                type="submit"
+                                id="sendButton"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                                disabled
+                            >
+                                <span id="sendButtonText">Send</span>
+                                <svg id="sendSpinner" class="animate-spin -mr-1 ml-2 h-4 w-4 hidden" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Case Summary (25% - 1 column) -->
+            <div class="lg:col-span-1">
+                <div class="rounded-lg border bg-card text-card-foreground shadow-sm h-[700px] flex flex-col">
+                    <div class="flex flex-col space-y-1.5 p-4 border-b">
+                        <h3 class="text-lg font-semibold leading-none tracking-tight">Live Case Summary</h3>
+                        <p class="text-sm text-muted-foreground">Real-time patient information</p>
+                    </div>
+                    <div class="flex-1 p-4 overflow-y-auto">
+                        <div id="caseSummary" class="prose prose-sm max-w-none">
+                            <p class="text-muted-foreground">Summary will appear here once the case starts.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Case Completion Modal -->
+    <div id="completionModal" class="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm hidden">
+        <div class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+            <div class="flex flex-col space-y-2 text-center sm:text-left">
+                <h2 class="text-lg font-semibold">Case Completed</h2>
+                <p class="text-sm text-muted-foreground" id="completionMessage">
+                    Case has been completed successfully.
+                </p>
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                <button 
+                    id="nextCaseButton"
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                >
+                    Next Case
+                </button>
+                <button 
+                    id="viewSummaryButton"
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                >
+                    View Summary
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const userId = '{{ user_id }}';
+let currentCaseId = null;
+let chatActive = false;
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    loadAvailableCases();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Chat form submission
+    document.getElementById('chatForm').addEventListener('submit', handleChatSubmit);
+    
+    // Admit/Discharge buttons
+    document.getElementById('admitButton').addEventListener('click', () => completeCase('admit'));
+    document.getElementById('dischargeButton').addEventListener('click', () => completeCase('discharge'));
+    
+    // Modal buttons
+    document.getElementById('nextCaseButton').addEventListener('click', handleNextCase);
+    document.getElementById('viewSummaryButton').addEventListener('click', () => {
+        window.location.href = `/summary/${userId}`;
+    });
+}
+
+async function loadAvailableCases() {
+    try {
+        const response = await fetch('/api/cases');
+        const data = await response.json();
+        
+        const casesList = document.getElementById('casesList');
+        casesList.innerHTML = '';
+        
+        data.cases.forEach(caseInfo => {
+            const caseCard = createCaseCard(caseInfo);
+            casesList.appendChild(caseCard);
+        });
+    } catch (error) {
+        console.error('Error loading cases:', error);
+        showError('Failed to load cases');
+    }
+}
+
+function createCaseCard(caseInfo) {
+    const card = document.createElement('div');
+    card.className = 'rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-md transition-shadow';
+    card.innerHTML = `
+        <div class="flex flex-col space-y-1.5 p-6">
+            <h3 class="text-lg font-semibold leading-none tracking-tight">${caseInfo.title}</h3>
+            <p class="text-sm text-muted-foreground">${caseInfo.description}</p>
+        </div>
+        <div class="p-6 pt-0">
+            <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 w-full">
+                Start Case
+            </button>
+        </div>
+    `;
+    
+    card.addEventListener('click', () => startCase(caseInfo.id, caseInfo.title));
+    return card;
+}
+
+async function startCase(caseId, caseTitle) {
+    try {
+        // Show case interface, hide case selection
+        document.getElementById('caseSelectionCard').classList.add('hidden');
+        document.getElementById('caseInterface').classList.remove('hidden');
+        
+        // Update UI
+        document.getElementById('caseTitle').textContent = caseTitle;
+        document.getElementById('currentCaseTitle').textContent = caseTitle;
+        currentCaseId = caseId;
+        
+        // Clear chat messages
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = '<div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground"><div class="flex items-center space-x-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Starting case...</span></div></div>';
+        
+        // Start the case
+        const response = await fetch(`/api/cases/${caseId}/start/${userId}`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Clear loading message
+            chatMessages.innerHTML = '';
+            
+            // Add initial message using improved formatting
+            addMessage('assistant', data.initial_message);
+            
+            // Update summary
+            updateSummary(data.summary);
+            
+            // Enable chat
+            enableChat();
+            
+        } else {
+            throw new Error(data.detail || 'Failed to start case');
+        }
+        
+    } catch (error) {
+        console.error('Error starting case:', error);
+        showError('Failed to start case: ' + error.message);
+        
+        // Return to case selection
+        document.getElementById('caseInterface').classList.add('hidden');
+        document.getElementById('caseSelectionCard').classList.remove('hidden');
+    }
+}
+
+function enableChat() {
+    chatActive = true;
+    document.getElementById('messageInput').disabled = false;
+    document.getElementById('sendButton').disabled = false;
+    document.getElementById('messageInput').focus();
+}
+
+function disableChat() {
+    chatActive = false;
+    document.getElementById('messageInput').disabled = true;
+    document.getElementById('sendButton').disabled = true;
+}
+
+async function handleChatSubmit(e) {
+    e.preventDefault();
+    
+    if (!chatActive || !currentCaseId) return;
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessage('user', message);
+    messageInput.value = '';
+    
+    // Show loading state
+    const sendButton = document.getElementById('sendButton');
+    const sendButtonText = document.getElementById('sendButtonText');
+    const sendSpinner = document.getElementById('sendSpinner');
+    
+    sendButton.disabled = true;
+    sendButtonText.textContent = 'Sending...';
+    sendSpinner.classList.remove('hidden');
+    
+    try {
+        const response = await fetch(`/api/cases/${currentCaseId}/chat/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Add AI response using improved formatting
+            addMessage('assistant', data.message);
+            
+            // Update summary
+            updateSummary(data.summary);
+        } else {
+            throw new Error(data.detail || 'Failed to send message');
+        }
+        
+    } catch (error) {
+        console.error('Error sending message:', error);
+        showError('Failed to send message: ' + error.message);
+    } finally {
+        // Reset button state
+        sendButton.disabled = false;
+        sendButtonText.textContent = 'Send';
+        sendSpinner.classList.add('hidden');
+    }
+}
+
+function addMessage(role, content) {
+    const chatMessages = document.getElementById('chatMessages');
+    
+    // Use the improved formatting from EMCaseSimulator
+    const messageHtml = EMCaseSimulator.chat.formatMessage(role, content, new Date());
+    
+    // Create a temporary container to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = messageHtml;
+    const messageDiv = tempDiv.firstElementChild;
+    
+    // Add animation class
+    messageDiv.classList.add('chat-message');
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Auto-scroll to bottom with smooth behavior
+    chatMessages.scrollTo({
+        top: chatMessages.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+function updateSummary(summaryHtml) {
+    const caseSummary = document.getElementById('caseSummary');
+    // Use the improved markdown processing
+    caseSummary.innerHTML = EMCaseSimulator.chat.processContent(summaryHtml);
+}
+
+async function completeCase(action) {
+    if (!currentCaseId) return;
+    
+    try {
+        disableChat();
+        
+        const response = await fetch(`/api/cases/${currentCaseId}/complete/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: action
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Show completion modal
+            const modal = document.getElementById('completionModal');
+            const message = document.getElementById('completionMessage');
+            message.textContent = `Case completed with action: ${action.charAt(0).toUpperCase() + action.slice(1)}. Data has been saved to Google Drive.`;
+            modal.classList.remove('hidden');
+            
+            // Check for next case
+            await checkNextCase();
+            
+        } else {
+            throw new Error(data.detail || 'Failed to complete case');
+        }
+        
+    } catch (error) {
+        console.error('Error completing case:', error);
+        showError('Failed to complete case: ' + error.message);
+        enableChat();
+    }
+}
+
+async function checkNextCase() {
+    try {
+        const response = await fetch(`/api/next-case/${userId}`);
+        const data = await response.json();
+        
+        const nextCaseButton = document.getElementById('nextCaseButton');
+        
+        if (data.has_next) {
+            nextCaseButton.textContent = 'Next Case';
+            nextCaseButton.onclick = handleNextCase;
+        } else {
+            nextCaseButton.textContent = 'View Final Summary';
+            nextCaseButton.onclick = () => {
+                window.location.href = `/summary/${userId}`;
+            };
+        }
+        
+    } catch (error) {
+        console.error('Error checking next case:', error);
+    }
+}
+
+async function handleNextCase() {
+    // Hide modal and reset interface
+    document.getElementById('completionModal').classList.add('hidden');
+    document.getElementById('caseInterface').classList.add('hidden');
+    document.getElementById('caseSelectionCard').classList.remove('hidden');
+    
+    currentCaseId = null;
+    chatActive = false;
+    
+    // Reload available cases
+    await loadAvailableCases();
+}
+
+function showError(message) {
+    EMCaseSimulator.ui.showToast(message, 'error');
+}
+</script>
+{% endblock %}

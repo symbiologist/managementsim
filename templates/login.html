@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Emergency Medicine Case Simulator{% endblock %}
+
+{% block content %}
+<div class="container relative h-[800px] flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+    <div class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800"></div>
+        <div class="relative z-20 flex items-center text-lg font-medium">
+            <svg class="mr-2 h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            EM Case Simulator
+        </div>
+        <div class="relative z-20 mt-auto">
+            <blockquote class="space-y-2">
+                <p class="text-lg">
+                    "This simulation platform has transformed how we assess clinical reasoning in emergency medicine education."
+                </p>
+                <footer class="text-sm">Medical Education Team</footer>
+            </blockquote>
+        </div>
+    </div>
+    
+    <div class="lg:p-8">
+        <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+            <div class="flex flex-col space-y-2 text-center">
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    Welcome to EM Case Simulator
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    Enter your user ID to begin the simulation
+                </p>
+            </div>
+            
+            <div class="grid gap-6">
+                <form id="loginForm" class="space-y-4">
+                    <div class="grid gap-2">
+                        <label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" for="user_id">
+                            User ID
+                        </label>
+                        <input 
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                            id="user_id" 
+                            name="user_id"
+                            placeholder="Enter your user ID" 
+                            type="text" 
+                            required
+                        />
+                    </div>
+                    
+                    <button 
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full" 
+                        type="submit"
+                        id="loginButton"
+                    >
+                        <span id="loginButtonText">Start Simulation</span>
+                        <svg id="loginSpinner" class="animate-spin -mr-1 ml-3 h-4 w-4 text-white hidden" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </form>
+                
+                <!-- Error Alert -->
+                <div id="errorAlert" class="rounded-lg border border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive hidden p-4">
+                    <div class="flex">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium">Login Error</h3>
+                            <div class="mt-2 text-sm" id="errorMessage">
+                                Invalid user ID. Please check your credentials.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="px-8 text-center text-sm text-muted-foreground">
+                This simulation is designed for authorized medical trainees only.
+                <br />
+                Contact your administrator if you need access.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('user_id').value.trim();
+    const button = document.getElementById('loginButton');
+    const buttonText = document.getElementById('loginButtonText');
+    const spinner = document.getElementById('loginSpinner');
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (!userId) {
+        showError('Please enter a user ID');
+        return;
+    }
+    
+    // Show loading state
+    button.disabled = true;
+    buttonText.textContent = 'Logging in...';
+    spinner.classList.remove('hidden');
+    errorAlert.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: userId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Redirect to case page
+            window.location.href = `/case/${userId}`;
+        } else {
+            showError(data.detail || 'Login failed');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+        console.error('Login error:', error);
+    } finally {
+        // Reset button state
+        button.disabled = false;
+        buttonText.textContent = 'Start Simulation';
+        spinner.classList.add('hidden');
+    }
+    
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorAlert.classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}
