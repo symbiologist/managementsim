@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Emergency Medicine Case Simulator{% endblock %}</title>
+    <title>{% block title %}CAVIAR Case Simulator{% endblock %}</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,10 +64,10 @@
 <body class="min-h-screen bg-background font-sans antialiased">
     <div class="relative flex min-h-screen flex-col">
         <header class="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div class="container flex h-14 max-w-screen-2xl items-center">
+            <div class="container flex h-14 max-w-screen-2xl items-center pl-6">
                 <div class="mr-4 hidden md:flex">
                     <a class="mr-6 flex items-center space-x-2" href="/">
-                        <span class="hidden font-bold sm:inline-block">EM Case Simulator</span>
+                        <span class="hidden font-bold sm:inline-block">CAVIAR</span>
                     </a>
                 </div>
                 {% block header %}{% endblock %}
@@ -78,11 +78,12 @@
             {% block content %}{% endblock %}
         </main>
         
+        <!-- CENTER-ALIGNED FOOTER -->
         <footer class="border-t border-border">
-            <div class="container flex flex-col items-center justify-between gap-4 py-10 md:h-24 md:flex-row md:py-0">
-                <div class="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-                    <p class="text-center text-sm leading-loose text-muted-foreground md:text-left">
-                        Emergency Medicine Case Simulator - Built for medical education
+            <div class="w-full flex items-center justify-center py-6">
+                <div class="text-center">
+                    <p class="text-sm text-muted-foreground">
+                        CAVIAR: Clinical AI Voice Input Assessment of Reasoning
                     </p>
                 </div>
             </div>

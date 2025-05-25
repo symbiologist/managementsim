@@ -89,6 +89,63 @@ body {
   }
 }
 
+/* Chat message alignment - Force proper justification */
+.user-message {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+.ai-message {
+  display: flex !important;
+  justify-content: flex-start !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  width: 100% !important;
+}
+
+.user-message > div {
+  max-width: 75% !important;
+  margin-left: auto !important;
+  background-color: #2563eb !important;
+  color: white !important;
+  border-radius: 1rem !important;
+  border-bottom-right-radius: 0.25rem !important;
+  padding: 0.75rem 1rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  text-align: right !important;
+}
+
+.user-message > div * {
+  text-align: right !important;
+}
+
+.user-message .flex {
+  justify-content: flex-end !important;
+}
+
+.ai-message > div {
+  max-width: 75% !important;
+  margin-right: auto !important;
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+  border-radius: 1rem !important;
+  border-bottom-left-radius: 0.25rem !important;
+  padding: 0.75rem 1rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  text-align: left !important;
+}
+
+.ai-message > div * {
+  text-align: left !important;
+}
+
+.ai-message .flex {
+  justify-content: flex-start !important;
+}
+
 /* Loading states */
 .loading-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -198,6 +255,11 @@ input[type="radio"]:focus {
   
   .lg\:col-span-1 {
     grid-column: span 1 / span 1;
+  }
+
+  .user-message > div,
+  .ai-message > div {
+    max-width: 85% !important;
   }
 }
 

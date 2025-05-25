@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List
+from pydantic import BaseModel
 
 # Load environment variables from .env file
 def load_env_variables():
@@ -37,12 +38,20 @@ from models.schemas import (
     CaseListResponse, CaseInfo, CaseStartResponse, 
     CaseCompleteRequest, CaseCompleteResponse,
     SurveySubmitRequest, SurveySubmitResponse,
-    FinalSummaryResponse, CaseSummaryData
+    FinalSummaryResponse, CaseSummaryData, ChatMessage
 )
 
 # Import configuration
 from config.case_config import AVAILABLE_CASES
 from config.survey_questions import SURVEY_QUESTIONS
+
+# Define additional models for summary generation
+class SummaryGenerationRequest(BaseModel):
+    messages: List[ChatMessage]
+    case_id: str
+
+class SummaryGenerationResponse(BaseModel):
+    summary: str
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -393,6 +402,61 @@ async def submit_survey(user_id: str, request: SurveySubmitRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error submitting survey: {str(e)}")
+
+
+@app.post("/api/generate-summary", response_model=SummaryGenerationResponse)
+async def generate_summary(request: SummaryGenerationRequest):
+    """
+    Generate an LLM-based summary of a case conversation.
+    
+    Args:
+        request (SummaryGenerationRequest): Request with messages and case ID
+        
+    Returns:
+        SummaryGenerationResponse: Response with generated summary
+        
+    Raises:
+        HTTPException: If error occurs during summary generation
+    """
+    try:
+        print(f"Generating summary for case: {request.case_id}")
+        print(f"Number of messages: {len(request.messages)}")
+        
+        # Convert ChatMessage objects to dicts for the OpenAI service
+        messages_dict = [msg.dict() for msg in request.messages]
+        print(f"Messages converted to dicts: {len(messages_dict)}")
+        
+        # Check if OpenAI service is available
+        if not openai_service:
+            raise Exception("OpenAI service not initialized")
+        
+        # Generate summary using OpenAI service with a specific prompt for case summaries
+        summary_prompt = """
+        Please provide a concise, professional summary of this medical case simulation conversation. 
+        Focus on:
+        - The clinical reasoning process demonstrated
+        - Key diagnostic and treatment decisions made
+        - The overall approach to patient care
+        - Any notable clinical insights or educational moments
+        
+        Keep the summary to 2-3 sentences and make it specific to the actual conversation content.
+        """
+        
+        print("Calling OpenAI service...")
+        
+        # Use the conversation summary generation method
+        summary = openai_service.generate_conversation_summary(messages_dict, summary_prompt)
+        
+        print(f"Generated summary: {summary[:100]}...")
+        
+        return SummaryGenerationResponse(summary=summary)
+        
+    except Exception as e:
+        print(f"Error in generate_summary: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generating summary: {str(e)}")
 
 
 @app.get("/api/next-case/{user_id}")

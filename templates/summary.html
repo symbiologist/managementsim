@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container max-w-screen-2xl p-4">
+<div class="max-w-screen-2xl mx-auto px-6 py-4">
     <!-- Header -->
     <div class="mb-8">
         <h1 class="text-3xl font-bold tracking-tight">Simulation Complete</h1>
@@ -27,7 +27,7 @@
         <div class="flex items-center space-x-2 text-muted-foreground">
             <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span>Loading summary data...</span>
         </div>
@@ -35,10 +35,10 @@
 
     <!-- Main Content -->
     <div id="mainContent" class="hidden">
-        <!-- Two Column Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Left Column: Case Summaries -->
-            <div class="space-y-6">
+        <!-- Two Column Layout: 65% / 35% -->
+        <div class="grid grid-cols-1 lg:grid-cols-20 gap-8">
+            <!-- Left Column: Case Summaries (65% - 13 columns) -->
+            <div class="lg:col-span-13 space-y-6">
                 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
                     <div class="flex flex-col space-y-1.5 p-6 border-b">
                         <h2 class="text-xl font-semibold leading-none tracking-tight">Completed Cases</h2>
@@ -52,15 +52,15 @@
                 </div>
             </div>
 
-            <!-- Right Column: Survey Questions -->
-            <div class="space-y-6">
+            <!-- Right Column: Survey Questions (35% - 7 columns) -->
+            <div class="lg:col-span-7 space-y-6">
                 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
                     <div class="flex flex-col space-y-1.5 p-6 border-b">
                         <h2 class="text-xl font-semibold leading-none tracking-tight">Case Evaluation</h2>
-                        <p class="text-sm text-muted-foreground">Rate each case on the following criteria (1 = Strongly Disagree, 5 = Strongly Agree)</p>
+                        <p class="text-sm text-muted-foreground">Rate each case on the following criteria using the sliders (1 = Strongly Disagree, 5 = Strongly Agree)</p>
                     </div>
                     <div class="p-6 pt-0">
-                        <form id="surveyForm" class="space-y-8">
+                        <form id="surveyForm" class="space-y-4">
                             <div id="surveyQuestions">
                                 <!-- Survey questions will be populated here -->
                             </div>
@@ -81,7 +81,7 @@
                                     <span id="submitButtonText">Submit Final Survey</span>
                                     <svg id="submitSpinner" class="animate-spin -mr-1 ml-2 h-4 w-4 hidden" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -133,6 +133,72 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Custom slider styles */
+.rating-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: linear-gradient(to right, #ef4444 0%, #f97316 25%, #eab308 50%, #22c55e 75%, #16a34a 100%);
+    border-radius: 4px;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+}
+
+.rating-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #ffffff;
+    border: 3px solid #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.rating-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    border-color: #1d4ed8;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.rating-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #ffffff;
+    border: 3px solid #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.rating-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    border-color: #1d4ed8;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.rating-display {
+    transition: all 0.3s ease;
+}
+
+.summary-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.summary-loading svg {
+    animation: spin 1s linear infinite;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -162,7 +228,7 @@ async function loadSummaryData() {
             surveyResponses = data.existing_responses || {};
             
             // Populate case summaries
-            populateCaseSummaries(data.completed_cases);
+            await populateCaseSummaries(data.completed_cases);
             
             // Populate survey questions
             populateSurveyQuestions(data.completed_cases, data.survey_questions);
@@ -182,7 +248,7 @@ async function loadSummaryData() {
     }
 }
 
-function populateCaseSummaries(completedCases) {
+async function populateCaseSummaries(completedCases) {
     const container = document.getElementById('caseSummaries');
     container.innerHTML = '';
     
@@ -191,13 +257,13 @@ function populateCaseSummaries(completedCases) {
         return;
     }
     
-    completedCases.forEach((caseData, index) => {
+    // Process cases sequentially to avoid overwhelming the API
+    for (let index = 0; index < completedCases.length; index++) {
+        const caseData = completedCases[index];
         const caseDiv = document.createElement('div');
         caseDiv.className = 'border rounded-lg p-4 space-y-3';
         
-        // Generate brief summary from chat messages
-        const chatSummary = generateChatSummary(caseData.chat_messages);
-        
+        // Create initial structure with loading summary
         caseDiv.innerHTML = `
             <div class="flex items-start justify-between">
                 <div>
@@ -210,22 +276,71 @@ function populateCaseSummaries(completedCases) {
                 <p class="text-sm"><strong>Interactions:</strong> ${caseData.chat_messages.length} messages</p>
                 <div class="text-sm">
                     <strong>Brief Summary:</strong>
-                    <p class="mt-1 text-muted-foreground">${chatSummary}</p>
+                    <p class="mt-1 text-muted-foreground summary-loading">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating summary...
+                    </p>
                 </div>
             </div>
         `;
         
         container.appendChild(caseDiv);
-    });
+        
+        // Generate summary asynchronously
+        try {
+            const summary = await generateLLMSummary(caseData.chat_messages, caseData.case_id);
+            const summaryElement = caseDiv.querySelector('.summary-loading');
+            if (summaryElement) {
+                summaryElement.className = 'mt-1 text-muted-foreground';
+                summaryElement.innerHTML = summary;
+            }
+        } catch (error) {
+            console.error('Failed to generate summary for case:', caseData.case_id, error);
+            const summaryElement = caseDiv.querySelector('.summary-loading');
+            if (summaryElement) {
+                summaryElement.className = 'mt-1 text-muted-foreground';
+                summaryElement.innerHTML = 'Unable to generate summary at this time.';
+            }
+        }
+    }
 }
 
-function generateChatSummary(messages) {
+async function generateLLMSummary(messages, caseId) {
     if (messages.length === 0) return 'No conversation recorded.';
     
-    const userMessages = messages.filter(msg => msg.role === 'user').length;
-    const aiMessages = messages.filter(msg => msg.role === 'assistant').length;
-    
-    return `Conversation included ${userMessages} questions/requests from you and ${aiMessages} responses from the AI physician. The simulation covered patient assessment, diagnostic workup, and clinical decision-making.`;
+    try {
+        const response = await fetch('/api/generate-summary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages: messages,
+                case_id: caseId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            return data.summary || 'Summary not available.';
+        } else {
+            throw new Error(data.detail || 'Failed to generate summary');
+        }
+        
+    } catch (error) {
+        console.error('Error generating LLM summary:', error);
+        // Fallback to a simple summary based on message count
+        const userMessages = messages.filter(msg => msg.role === 'user').length;
+        const assistantMessages = messages.filter(msg => msg.role === 'assistant').length;
+        
+        if (userMessages === 0) return 'No user interactions recorded.';
+        
+        return `Interactive medical simulation with ${userMessages} questions/responses from you and ${assistantMessages} responses from the AI physician. Case covered clinical assessment, diagnosis, and management planning.`;
+    }
 }
 
 function populateSurveyQuestions(completedCases, questions) {
@@ -239,7 +354,7 @@ function populateSurveyQuestions(completedCases, questions) {
     
     completedCases.forEach((caseData, caseIndex) => {
         const caseSection = document.createElement('div');
-        caseSection.className = 'space-y-4 pb-6 border-b last:border-b-0';
+        caseSection.className = 'space-y-3 pb-4 border-b last:border-b-0';
         
         const caseHeader = document.createElement('h3');
         caseHeader.className = 'text-lg font-semibold text-primary';
@@ -248,64 +363,93 @@ function populateSurveyQuestions(completedCases, questions) {
         
         questions.forEach((question, questionIndex) => {
             const questionDiv = document.createElement('div');
-            questionDiv.className = 'space-y-3';
+            questionDiv.className = 'space-y-2 p-3 bg-muted/20 rounded-lg';
             
             const questionLabel = document.createElement('label');
-            questionLabel.className = 'text-sm font-medium';
+            questionLabel.className = 'text-sm font-medium block';
             questionLabel.textContent = `${questionIndex + 1}. ${question}`;
             questionDiv.appendChild(questionLabel);
             
-            const scaleDiv = document.createElement('div');
-            scaleDiv.className = 'flex items-center space-x-4';
+            // Slider container
+            const sliderContainer = document.createElement('div');
+            sliderContainer.className = 'space-y-2';
             
-            // Add scale labels
-            const leftLabel = document.createElement('span');
-            leftLabel.className = 'text-xs text-muted-foreground';
-            leftLabel.textContent = 'Strongly Disagree';
-            scaleDiv.appendChild(leftLabel);
+            // Scale labels
+            const scaleLabels = document.createElement('div');
+            scaleLabels.className = 'flex justify-between text-xs text-muted-foreground px-1';
+            scaleLabels.innerHTML = `
+                <span>Strongly Disagree</span>
+                <span>Disagree</span>
+                <span>Neutral</span>
+                <span>Agree</span>
+                <span>Strongly Agree</span>
+            `;
             
-            // Add radio buttons
-            const radioGroup = document.createElement('div');
-            radioGroup.className = 'flex items-center space-x-2';
+            // Slider wrapper
+            const sliderWrapper = document.createElement('div');
+            sliderWrapper.className = 'relative px-1';
             
-            for (let rating = 1; rating <= 5; rating++) {
-                const radioWrapper = document.createElement('div');
-                radioWrapper.className = 'flex flex-col items-center space-y-1';
-                
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `case_${caseData.case_id}_question_${questionIndex}`;
-                radio.value = rating;
-                radio.className = 'h-4 w-4 text-primary focus:ring-2 focus:ring-primary';
-                radio.addEventListener('change', () => updateSurveyResponse(caseData.case_id, questionIndex, rating));
-                
-                // Set existing response if available
-                if (surveyResponses[caseData.case_id] && surveyResponses[caseData.case_id][questionIndex] === rating) {
-                    radio.checked = true;
-                }
-                
-                const ratingLabel = document.createElement('span');
-                ratingLabel.className = 'text-xs text-muted-foreground';
-                ratingLabel.textContent = rating;
-                
-                radioWrapper.appendChild(radio);
-                radioWrapper.appendChild(ratingLabel);
-                radioGroup.appendChild(radioWrapper);
+            // Slider input
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '1';
+            slider.max = '5';
+            slider.step = '1';
+            slider.value = '3'; // Default to neutral
+            slider.className = 'rating-slider';
+            slider.id = `slider_${caseData.case_id}_${questionIndex}`;
+            
+            // Set existing response if available
+            if (surveyResponses[caseData.case_id] && surveyResponses[caseData.case_id][questionIndex]) {
+                slider.value = surveyResponses[caseData.case_id][questionIndex];
             }
             
-            scaleDiv.appendChild(radioGroup);
+            // Event listener for slider
+            slider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                updateSurveyResponse(caseData.case_id, questionIndex, value);
+                
+                // Update slider color based on value
+                updateSliderColor(this, value);
+            });
             
-            const rightLabel = document.createElement('span');
-            rightLabel.className = 'text-xs text-muted-foreground';
-            rightLabel.textContent = 'Strongly Agree';
-            scaleDiv.appendChild(rightLabel);
+            // Initialize slider color
+            updateSliderColor(slider, parseInt(slider.value));
             
-            questionDiv.appendChild(scaleDiv);
+            sliderWrapper.appendChild(slider);
+            sliderContainer.appendChild(scaleLabels);
+            sliderContainer.appendChild(sliderWrapper);
+            
+            questionDiv.appendChild(sliderContainer);
             caseSection.appendChild(questionDiv);
         });
         
         container.appendChild(caseSection);
     });
+}
+
+function getRatingText(value) {
+    const texts = {
+        1: 'Strongly Disagree',
+        2: 'Disagree',
+        3: 'Neutral',
+        4: 'Agree',
+        5: 'Strongly Agree'
+    };
+    return texts[value] || 'Neutral';
+}
+
+function updateSliderColor(slider, value) {
+    const colors = {
+        1: '#ef4444', // red
+        2: '#f97316', // orange
+        3: '#eab308', // yellow
+        4: '#22c55e', // green
+        5: '#16a34a'  // dark green
+    };
+    
+    const color = colors[value] || '#eab308';
+    slider.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${(value-1)*25}%, #e2e8f0 ${(value-1)*25}%, #e2e8f0 100%)`;
 }
 
 function updateSurveyResponse(caseId, questionIndex, rating) {

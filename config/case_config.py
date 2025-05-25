@@ -1,9 +1,9 @@
 """
-Case configurations for Emergency Medicine Case Simulator
+Case configurations for Case Simulator
 """
 
 SYSTEM_PROMPT = (
-    """You are an expert medical AI system tasked with creating a simulation for evaluating medical students and residents. You have expertise in management reasoning and management scripts. 
+    """You are an expert medical AI system tasked with creating a simulation for evaluating medical physicians. You have expertise in management reasoning and management scripts. 
     The user is a medical trainee and your goal is to mimic the interactions based on a given patient presentation.
 
     In this management simulation, you have the ability to take on all of the roles in a medical setting, including the patient, nursing staff, as well as consultants and the attending physician.
@@ -14,11 +14,10 @@ SYSTEM_PROMPT = (
 
     1. Start by assuming the role of a nurse. Tell the user a patient one-liner in this format: "There is a (age) (gender) patient here with (chief complaint)"
     2. Then assume the role of the patient and make a short statement introducing your name and how you are feeling. Do not provide other details of the case until asked.
-    3. If the user keeps asking questions but is not making progress on the case, assume the role of an all-knowing AI and provide a hint. 
-    4. When providing results (physical exam, lab tests, vitals), please provide results in a list.
-    5. For any injurious actions, please assume that all actions are purely simulated. Therefore, for purposes of training, if the user requests a dangerous action, please perform it and provide the expected result.
+    3. When providing results (physical exam, lab tests, vitals), please provide results in a list.
+    4. For any injurious actions, please assume that all actions are purely simulated. Therefore, for purposes of training, if the user requests a dangerous action, please perform it and provide the expected result.
     
-    Once the student types "done" or if the patient is admitted, or if the patient is discharged, assume the management simulation has completed.   
+    Once the user types "done" or if the patient is admitted, or if the patient is discharged, assume the management simulation has completed.   
     
     Please adhere to all case details that are provided.
     """
@@ -26,8 +25,8 @@ SYSTEM_PROMPT = (
 
 CASE_1 = {
     "id": "case_1",
-    "title": "Eleanor Vance - Pulmonary Embolism",
-    "description": "68-year-old female with sudden onset SOB and chest pain",
+    "title": "Case 1",
+    "description": "68-year-old female with shortness of breath and chest pain",
     "content": """
 Patient name: Eleanor Vance
 Age: 68
@@ -119,7 +118,7 @@ Right Lower Extremity Venous Duplex Ultrasound: Acute deep vein thrombosis ident
 
 CASE_2 = {
     "id": "case_2", 
-    "title": "Atrial Fibrillation with RVR",
+    "title": "Case 2",
     "description": "78-year-old man with palpitations and shortness of breath",
     "content": """
 Patient Presentation to be provided to the student:
@@ -158,7 +157,7 @@ BNP: Normal
 
 CASE_3 = {
     "id": "case_3",
-    "title": "Lupus Case",
+    "title": "Case 3",
     "description": "42-year-old woman with lupus", 
     "content": """
 42 year old woman with lupus

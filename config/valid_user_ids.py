@@ -4,5 +4,7 @@ Add authorized user IDs to this list.
 """
 
 VALID_USER_IDS = [
-    "dwu"
+    "david",
+    "adrian",
+    "alex"
 ]

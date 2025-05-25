@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container max-w-screen-2xl p-4">
+<div class="max-w-screen-2xl mx-auto px-6 py-4">
     <!-- Case Selection Card -->
     <div id="caseSelectionCard" class="mb-6 rounded-lg border bg-card text-card-foreground shadow-sm">
         <div class="flex flex-col space-y-1.5 p-6">
@@ -29,87 +29,93 @@
 
     <!-- Main Case Interface -->
     <div id="caseInterface" class="hidden">
-        <!-- Case Controls -->
-        <div class="mb-4 flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <h2 class="text-xl font-semibold" id="caseTitle">Case Title</h2>
-                <div class="flex space-x-2">
-                    <button 
-                        id="admitButton"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-9 px-4 py-2"
-                    >
-                        Admit Patient
-                    </button>
-                    <button 
-                        id="dischargeButton"
-                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 py-2"
-                    >
-                        Discharge Patient
-                    </button>
-                </div>
-            </div>
+        <!-- Case Header (just title now) -->
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold" id="caseTitle">Case Title</h2>
         </div>
 
-        <!-- Main Content: Chat (75%) + Summary (25%) -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Chat Interface (75% - 3 columns) -->
-            <div class="lg:col-span-3 flex flex-col h-[700px]">
-                <div class="rounded-lg border bg-card text-card-foreground shadow-sm flex-1 flex flex-col">
-                    <div class="flex flex-col space-y-1.5 p-4 border-b">
-                        <h3 class="text-lg font-semibold leading-none tracking-tight">Simulation Interface</h3>
-                        <p class="text-sm text-muted-foreground">Ask questions, order tests, request medications, and consults</p>
-                    </div>
-                    
-                    <!-- Chat Messages - Fixed Height with Scroll -->
-                    <div class="flex-1 p-4 overflow-y-auto min-h-0" id="chatMessages" style="max-height: 500px;">
-                        <div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground">
-                            <div class="flex items-center space-x-2">
-                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span>Loading case...</span>
-                            </div>
+        <!-- Main Content: Using CSS Grid for Perfect Alignment -->
+        <div class="grid grid-cols-1 lg:grid-cols-10 gap-6" style="height: 760px;">
+            <!-- Chat Interface (70% - 7 columns) -->
+            <div class="lg:col-span-7 rounded-lg border bg-card text-card-foreground shadow-sm" style="height: 760px; display: grid; grid-template-rows: 77px 1fr 68px;">
+                <!-- Header -->
+                <div class="flex flex-col space-y-1.5 p-4 border-b">
+                    <h3 class="text-lg font-semibold leading-none tracking-tight">Simulation Interface</h3>
+                    <p class="text-sm text-muted-foreground">Ask questions, perform exam maneouvers, order tests. Case continues until you admit or discharge the patient.</p>
+                </div>
+                
+                <!-- Chat Messages -->
+                <div class="p-4 overflow-y-auto" id="chatMessages">
+                    <div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground">
+                        <div class="flex items-center space-x-2">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Loading case...</span>
                         </div>
                     </div>
-                    
-                    <!-- Chat Input -->
-                    <div class="border-t p-4">
-                        <form id="chatForm" class="flex space-x-2">
-                            <input 
-                                type="text" 
-                                id="messageInput"
-                                placeholder="Type your message or question..."
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
-                                disabled
-                            />
-                            <button 
-                                type="submit"
-                                id="sendButton"
-                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-                                disabled
-                            >
-                                <span id="sendButtonText">Send</span>
-                                <svg id="sendSpinner" class="animate-spin -mr-1 ml-2 h-4 w-4 hidden" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            </button>
-                        </form>
-                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="border-t px-4 py-3">
+                    <form id="chatForm" class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="messageInput"
+                            placeholder="Type your message or question..."
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
+                            disabled
+                        />
+                        <button 
+                            type="submit"
+                            id="sendButton"
+                            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                            disabled
+                        >
+                            <span id="sendButtonText">Send</span>
+                            <svg id="sendSpinner" class="animate-spin -mr-1 ml-2 h-4 w-4 hidden" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <!-- Live Case Summary (25% - 1 column) -->
-            <div class="lg:col-span-1">
-                <div class="rounded-lg border bg-card text-card-foreground shadow-sm h-[700px] flex flex-col">
+            <!-- Right Column: Summary + Action Buttons (30% - 3 columns) -->
+            <div class="lg:col-span-3" style="height: 760px; display: grid; grid-template-rows: 692px 64px; gap: 4px;">
+                <!-- Live Case Summary -->
+                <div class="rounded-lg border bg-card text-card-foreground shadow-sm" style="height: 692px; display: grid; grid-template-rows: 77px 1fr;">
+                    <!-- Summary Header -->
                     <div class="flex flex-col space-y-1.5 p-4 border-b">
                         <h3 class="text-lg font-semibold leading-none tracking-tight">Live Case Summary</h3>
                         <p class="text-sm text-muted-foreground">Real-time patient information</p>
                     </div>
-                    <div class="flex-1 p-4 overflow-y-auto">
+                    <!-- Summary Content -->
+                    <div class="p-4 overflow-y-auto">
                         <div id="caseSummary" class="prose prose-sm max-w-none">
                             <p class="text-muted-foreground">Summary will appear here once the case starts.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Container -->
+                <div class="rounded-lg border bg-card text-card-foreground shadow-sm" style="height: 64px;">
+                    <div class="p-4 h-full flex items-center">
+                        <div class="flex space-x-3 w-full">
+                            <button 
+                                id="admitButton"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:green-700 h-10 px-4 py-2 flex-1"
+                            >
+                                Admit
+                            </button>
+                            <button 
+                                id="dischargeButton"
+                                class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 flex-1"
+                            >
+                                Discharge
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -135,7 +141,7 @@
                 </button>
                 <button 
                     id="viewSummaryButton"
-                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:text-accent-foreground h-10 px-4 py-2"
                 >
                     View Summary
                 </button>
@@ -222,7 +228,7 @@ async function startCase(caseId, caseTitle) {
         
         // Clear chat messages
         const chatMessages = document.getElementById('chatMessages');
-        chatMessages.innerHTML = '<div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground"><div class="flex items-center space-x-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Starting case...</span></div></div>';
+        chatMessages.innerHTML = '<div id="loadingMessage" class="flex items-center justify-center h-full text-muted-foreground"><div class="flex items-center space-x-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Starting case...</span></div></div>';
         
         // Start the case
         const response = await fetch(`/api/cases/${caseId}/start/${userId}`, {

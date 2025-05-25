@@ -7,7 +7,6 @@ from typing import List, Dict
 from openai import OpenAI
 from config.case_config import SYSTEM_PROMPT, SUMMARY_SYSTEM_PROMPT
 
-
 class OpenAIService:
     """Service for handling OpenAI API interactions"""
     
@@ -133,6 +132,63 @@ class OpenAIService:
             return response.choices[0].message.content
         except Exception as e:
             return f"Could not generate summary at this time. Error: {str(e)[:100]}..."
+    
+    def generate_conversation_summary(self, messages: List[Dict[str, str]], custom_prompt: str = None) -> str:
+        """
+        Generate a conversational summary using a custom prompt.
+        
+        Args:
+            messages (List[Dict[str, str]]): Conversation messages
+            custom_prompt (str, optional): Custom prompt for summary generation
+            
+        Returns:
+            str: Generated conversation summary
+            
+        Raises:
+            Exception: If OpenAI API call fails
+        """
+        if not messages:
+            return "No conversation to summarize."
+        
+        # Format conversation for summary
+        formatted_conversation = []
+        for msg in messages:
+            if msg["role"] == "user":
+                role_label = "Medical Student/Resident"
+            elif msg["role"] == "assistant":
+                role_label = "AI Physician"
+            else:
+                continue
+            
+            formatted_conversation.append(f"{role_label}: {msg['content']}")
+        
+        conversation_text = "\n".join(formatted_conversation)
+        
+        # Use custom prompt or default
+        if custom_prompt:
+            system_prompt = custom_prompt
+        else:
+            system_prompt = """
+            You are an expert medical educator. Please provide a concise, professional summary 
+            of this medical case simulation conversation focusing on the clinical reasoning, 
+            diagnostic approach, and treatment decisions demonstrated.
+            """
+        
+        messages_for_api = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Please summarize this medical case conversation:\n\n{conversation_text}"}
+        ]
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages_for_api,
+                temperature=0.3,
+                max_tokens=200  # Keep summaries concise
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            return f"Unable to generate summary: {str(e)[:50]}..."
     
     def set_model(self, model_name: str):
         """

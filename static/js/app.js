@@ -140,7 +140,7 @@ window.EMCaseSimulator = {
                     <div class="flex items-center space-x-2 text-muted-foreground">
                         <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <span>${text}</span>
                     </div>
@@ -210,20 +210,28 @@ window.EMCaseSimulator = {
     // Chat related functions
     chat: {
         formatMessage(role, content, timestamp) {
+            // Note: timestamp is kept for logging purposes but not displayed
             const isUser = role === 'user';
-            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : '';
             
-            return `
-                <div class="mb-4 chat-message ${isUser ? 'ml-auto max-w-[80%]' : 'mr-auto max-w-[80%]'}">
-                    <div class="rounded-lg px-4 py-2 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
-                        <div class="flex items-center justify-between mb-1">
-                            <div class="text-sm font-medium">${isUser ? 'You' : 'AI Physician'}</div>
-                            ${time ? `<div class="text-xs opacity-75">${time}</div>` : ''}
+            if (isUser) {
+                // User messages: clean right-aligned bubble without headers
+                return `
+                    <div class="mb-4 user-message" data-timestamp="${timestamp || ''}">
+                        <div>
+                            <div class="text-sm leading-relaxed">${this.processContent(content)}</div>
                         </div>
-                        <div class="text-sm">${this.processContent(content)}</div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // AI messages: clean left-aligned bubble without headers
+                return `
+                    <div class="mb-4 ai-message" data-timestamp="${timestamp || ''}">
+                        <div>
+                            <div class="text-sm leading-relaxed">${this.processContent(content)}</div>
+                        </div>
+                    </div>
+                `;
+            }
         },
         
         processContent(content) {
@@ -256,22 +264,35 @@ window.EMCaseSimulator = {
         createStreamingMessage(role, initialContent = '') {
             const isUser = role === 'user';
             const messageDiv = document.createElement('div');
-            messageDiv.className = `mb-4 chat-message ${isUser ? 'ml-auto max-w-[80%]' : 'mr-auto max-w-[80%]'}`;
+            const timestamp = new Date().toISOString();
             
-            messageDiv.innerHTML = `
-                <div class="rounded-lg px-4 py-2 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'}">
-                    <div class="flex items-center justify-between mb-1">
-                        <div class="text-sm font-medium">${isUser ? 'You' : 'AI Physician'}</div>
-                        <div class="text-xs opacity-75">${new Date().toLocaleTimeString()}</div>
+            if (isUser) {
+                messageDiv.className = 'mb-4 user-message';
+                messageDiv.setAttribute('data-timestamp', timestamp);
+                messageDiv.innerHTML = `
+                    <div>
+                        <div class="text-sm leading-relaxed content">${this.processContent(initialContent)}</div>
+                        <div class="typing-indicator hidden">
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse"></span>
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.2s"></span>
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.4s"></span>
+                        </div>
                     </div>
-                    <div class="text-sm content">${this.processContent(initialContent)}</div>
-                    <div class="typing-indicator hidden">
-                        <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse"></span>
-                        <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.2s"></span>
-                        <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.4s"></span>
+                `;
+            } else {
+                messageDiv.className = 'mb-4 ai-message';
+                messageDiv.setAttribute('data-timestamp', timestamp);
+                messageDiv.innerHTML = `
+                    <div>
+                        <div class="text-sm leading-relaxed content">${this.processContent(initialContent)}</div>
+                        <div class="typing-indicator hidden">
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse"></span>
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.2s"></span>
+                            <span class="inline-block w-1 h-1 bg-current rounded-full animate-pulse" style="animation-delay: 0.4s"></span>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
             
             return messageDiv;
         },
